@@ -10,7 +10,7 @@
 ## Запуск
 ```bash
 pip install pygame
-python knb_swarm.py
+python knb.py
 ```
 ## Управление
 Закрыть окно – выход.  
