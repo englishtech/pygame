@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Крестики-Нолики</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #f093fb, #f5576c, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
+        }
+
+        .mode-selector {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .mode-btn {
+            padding: 10px 20px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .mode-btn:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: transparent;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .status {
+            font-size: 1.4rem;
+            margin: 15px 0;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .status .symbol {
+            font-weight: bold;
+            font-size: 1.6rem;
+        }
+
+        .status .symbol.x {
+            color: #f5576c;
+        }
+
+        .status .symbol.o {
+            color: #4facfe;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 120px);
+            grid-template-rows: repeat(3, 120px);
+            gap: 8px;
+            margin: 20px auto;
+            width: fit-content;
+            perspective: 800px;
+        }
+
+        .cell {
+            width: 120px;
+            height: 120px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .cell:hover:not(.taken) {
+            background: rgba(255,255,255,0.12);
+            transform: scale(1.05);
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .cell.taken {
+            cursor: default;
+        }
+
+        .cell.x-mark {
+            color: #f5576c;
+            text-shadow: 0 0 20px rgba(245, 87, 108, 0.5);
+            animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .cell.o-mark {
+            color: #4facfe;
+            text-shadow: 0 0 20px rgba(79, 172, 254, 0.5);
+            animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .cell.winner {
+            animation: winPulse 0.8s ease-in-out infinite;
+            border-color: #ffd700;
+            background: rgba(255, 215, 0, 0.15);
+        }
+
+        @keyframes winPulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+            50% { box-shadow: 0 0 35px rgba(255, 215, 0, 0.7); }
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .score-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .score-item.x-score .score-value { color: #f5576c; }
+        .score-item.o-score .score-value { color: #4facfe; }
+        .score-item.draw-score .score-value { color: #a8a8a8; }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-restart {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+        }
+
+        .btn-restart:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-reset {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .btn-reset:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-3px);
+        }
+
+        .win-line {
+            position: absolute;
+            background: linear-gradient(90deg, #ffd700, #ffed4e);
+            border-radius: 10px;
+            z-index: 10;
+            opacity: 0;
+            animation: lineAppear 0.5s ease forwards;
+        }
+
+        @keyframes lineAppear {
+            0% { opacity: 0; transform: scaleX(0); }
+            100% { opacity: 1; transform: scaleX(1); }
+        }
+
+        .board-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            33% { transform: translateY(-20px) rotate(120deg); }
+            66% { transform: translateY(10px) rotate(240deg); }
+        }
+
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0;
+        }
+
+        @keyframes confettiFall {
+            0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        .difficulty-selector {
+            margin: 10px 0;
+            display: none;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .difficulty-selector.visible {
+            display: flex;
+        }
+
+        .diff-btn {
+            padding: 8px 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .diff-btn:hover {
+            background: rgba(255,255,255,0.15);
+        }
+
+        .diff-btn.active {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            border-color: transparent;
+        }
+
+        @media (max-width: 480px) {
+            .board {
+                grid-template-columns: repeat(3, 90px);
+                grid-template-rows: repeat(3, 90px);
+            }
+            .cell {
+                width: 90px;
+                height: 90px;
+                font-size: 2.5rem;
+            }
+            h1 { font-size: 1.8rem; }
+            .scoreboard { gap: 15px; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    <div class="confetti-container" id="confetti"></div>
+
+    <div class="container">
+        <h1>✨ Крестики-Нолики ✨</h1>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="pvp" onclick="setMode('pvp')">👥 Два игрока</button>
+            <button class="mode-btn" data-mode="ai" onclick="setMode('ai')">🤖 Против ИИ</button>
+        </div>
+
+        <div class="difficulty-selector" id="difficultySelector">
+            <button class="diff-btn" data-diff="easy" onclick="setDifficulty('easy')">Лёгкий</button>
+            <button class="diff-btn active" data-diff="medium" onclick="setDifficulty('medium')">Средний</button>
+            <button class="diff-btn" data-diff="hard" onclick="setDifficulty('hard')">Сложный</button>
+        </div>
+
+        <div class="status" id="status">
+            <span>Ход:</span>
+            <span class="symbol x">X</span>
+        </div>
+
+        <div class="board-wrapper">
+            <div class="board" id="board">
+                <div class="cell" data-index="0" onclick="handleClick(0)"></div>
+                <div class="cell" data-index="1" onclick="handleClick(1)"></div>
+                <div class="cell" data-index="2" onclick="handleClick(2)"></div>
+                <div class="cell" data-index="3" onclick="handleClick(3)"></div>
+                <div class="cell" data-index="4" onclick="handleClick(4)"></div>
+                <div class="cell" data-index="5" onclick="handleClick(5)"></div>
+                <div class="cell" data-index="6" onclick="handleClick(6)"></div>
+                <div class="cell" data-index="7" onclick="handleClick(7)"></div>
+                <div class="cell" data-index="8" onclick="handleClick(8)"></div>
+            </div>
+        </div>
+
+        <div class="scoreboard">
+            <div class="score-item x-score">
+                <div class="score-label">❌ Игрок X</div>
+                <div class="score-value" id="xScore">0</div>
+            </div>
+            <div class="score-item draw-score">
+                <div class="score-label">🤝 Ничьи</div>
+                <div class="score-value" id="drawScore">0</div>
+            </div>
+            <div class="score-item o-score">
+                <div class="score-label">⭕ Игрок O</div>
+                <div class="score-value" id="oScore">0</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-restart" onclick="restartGame()">🔄 Новая игра</button>
+            <button class="btn btn-reset" onclick="resetScores()">🗑 Сброс счёта</button>
+        </div>
+    </div>
+
+    <script>
+        let board = Array(9).fill(null);
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let mode = 'pvp';
+        let difficulty = 'medium';
+        let scores = { X: 0, O: 0, draw: 0 };
+
+        const winPatterns = [
+            [0,1,2],[3,4,5],[6,7,8],
+            [0,3,6],[1,4,7],[2,5,8],
+            [0,4,8],[2,4,6]
+        ];
+
+        const cells = document.querySelectorAll('.cell');
+        const statusEl = document.getElementById('status');
+        const xScoreEl = document.getElementById('xScore');
+        const oScoreEl = document.getElementById('oScore');
+        const drawScoreEl = document.getElementById('drawScore');
+
+        function setMode(newMode) {
+            mode = newMode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === newMode);
+            });
+            document.getElementById('difficultySelector').classList.toggle('visible', newMode === 'ai');
+            restartGame();
+        }
+
+        function setDifficulty(diff) {
+            difficulty = diff;
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.diff === diff);
+            });
+            restartGame();
+        }
+
+        function handleClick(index) {
+            if (!gameActive || board[index]) return;
+            if (mode === 'ai' && currentPlayer === 'O') return;
+
+            makeMove(index);
+
+            if (mode === 'ai' && gameActive && currentPlayer === 'O') {
+                setTimeout(aiMove, 400);
+            }
+        }
+
+        function makeMove(index) {
+            board[index] = currentPlayer;
+            const cell = cells[index];
+            cell.textContent = currentPlayer;
+            cell.classList.add('taken', currentPlayer === 'X' ? 'x-mark' : 'o-mark');
+
+            const winner = checkWinner();
+            if (winner) {
+                endGame(winner);
+            } else if (board.every(c => c !== null)) {
+                endGame('draw');
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                updateStatus();
+            }
+        }
+
+        function checkWinner() {
+            for (const pattern of winPatterns) {
+                const [a, b, c] = pattern;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    highlightWin(pattern);
+                    return board[a];
+                }
+            }
+            return null;
+        }
+
+        function highlightWin(pattern) {
+            pattern.forEach(idx => cells[idx].classList.add('winner'));
+        }
+
+        function endGame(result) {
+            gameActive = false;
+            if (result === 'draw') {
+                scores.draw++;
+                statusEl.innerHTML = '<span>🤝 Ничья!</span>';
+            } else {
+                scores[result]++;
+                const symbolClass = result === 'X' ? 'x' : 'o';
+                const emoji = result === 'X' ? '❌' : '⭕';
+                let name = result;
+                if (mode === 'ai') {
+                    name = result === 'X' ? 'Вы' : 'ИИ';
+                }
+                statusEl.innerHTML = `<span class="symbol ${symbolClass}">${emoji} ${name} победил!</span>`;
+                if (mode === 'ai' && result === 'X') {
+                    launchConfetti();
+                }
+            }
+            updateScores();
+        }
+
+        function updateStatus() {
+            const symbolClass = currentPlayer === 'X' ? 'x' : 'o';
+            let label = currentPlayer;
+            if (mode === 'ai') {
+                label = currentPlayer === 'X' ? 'Ваш ход' : 'ИИ думает...';
+            }
+            statusEl.innerHTML = `<span class="symbol ${symbolClass}">${currentPlayer}</span> <span>${label}</span>`;
+        }
+
+        function updateScores() {
+            xScoreEl.textContent = scores.X;
+            oScoreEl.textContent = scores.O;
+            drawScoreEl.textContent = scores.draw;
+        }
+
+        function restartGame() {
+            board = Array(9).fill(null);
+            currentPlayer = 'X';
+            gameActive = true;
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.className = 'cell';
+            });
+            updateStatus();
+        }
+
+        function resetScores() {
+            scores = { X: 0, O: 0, draw: 0 };
+            updateScores();
+            restartGame();
+        }
+
+        // AI Logic
+        function aiMove() {
+            if (!gameActive) return;
+            let move;
+            if (difficulty === 'easy') {
+                move = getRandomMove();
+            } else if (difficulty === 'medium') {
+                move = Math.random() < 0.6 ? getBestMove() : getRandomMove();
+            } else {
+                move = getBestMove();
+            }
+            if (move !== undefined) makeMove(move);
+        }
+
+        function getRandomMove() {
+            const available = board.map((v, i) => v === null ? i : null).filter(v => v !== null);
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function getBestMove() {
+            let bestScore = -Infinity;
+            let bestMoves = [];
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === null) {
+                    board[i] = 'O';
+                    let score = minimax(board, 0, false, -Infinity, Infinity);
+                    board[i] = null;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMoves = [i];
+                    } else if (score === bestScore) {
+                        bestMoves.push(i);
+                    }
+                }
+            }
+            return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+        }
+
+        function minimax(boardState, depth, isMaximizing, alpha, beta) {
+            const winner = checkWinnerFor(boardState);
+            if (winner === 'O') return 10 - depth;
+            if (winner === 'X') return depth - 10;
+            if (boardState.every(c => c !== null)) return 0;
+
+            if (isMaximizing) {
+                let maxEval = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (boardState[i] === null) {
+                        boardState[i] = 'O';
+                        let eval_ = minimax(boardState, depth + 1, false, alpha, beta);
+                        boardState[i] = null;
+                        maxEval = Math.max(maxEval, eval_);
+                        alpha = Math.max(alpha, eval_);
+                        if (beta <= alpha) break;
+                    }
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (boardState[i] === null) {
+                        boardState[i] = 'X';
+                        let eval_ = minimax(boardState, depth + 1, true, alpha, beta);
+                        boardState[i] = null;
+                        minEval = Math.min(minEval, eval_);
+                        beta = Math.min(beta, eval_);
+                        if (beta <= alpha) break;
+                    }
+                }
+                return minEval;
+            }
+        }
+
+        function checkWinnerFor(boardState) {
+            for (const [a, b, c] of winPatterns) {
+                if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
+                    return boardState[a];
+                }
+            }
+            return null;
+        }
+
+        // Particles Background
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const colors = ['#f5576c', '#4facfe', '#f093fb', '#667eea', '#ffd700'];
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const size = Math.random() * 8 + 3;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 4 + 4) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        function launchConfetti() {
+            const container = document.getElementById('confetti');
+            const colors = ['#f5576c', '#4facfe', '#f093fb', '#ffd700', '#43e97b', '#fa709a', '#667eea'];
+            for (let i = 0; i < 80; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                const size = Math.random() * 10 + 5;
+                const isCircle = Math.random() > 0.5;
+                confetti.style.width = size + 'px';
+                confetti.style.height = isCircle ? size + 'px' : size * 0.4 + 'px';
+                confetti.style.borderRadius = isCircle ? '50%' : '2px';
+                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.top = '-20px';
+                confetti.style.animation = `confettiFall ${Math.random() * 2 + 2}s ease-out ${Math.random() * 0.5}s forwards`;
+                container.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 4000);
+            }
+        }
+
+        createParticles();
+        updateStatus();
+    </script>
+</body>
+</html>
